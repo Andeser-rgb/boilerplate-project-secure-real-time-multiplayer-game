@@ -3,11 +3,23 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const expect = require('chai');
 const socket = require('socket.io');
+const helmet = require("helmet");
+const cors = require("cors");
+
 
 const fccTestingRoutes = require('./routes/fcctesting.js');
 const runner = require('./test-runner.js');
 
 const app = express();
+
+app.use(helmet.noSniff());
+app.use(helmet.xssFilter());
+app.use(helmet.noCache());
+
+app.use(function (req, res, next) {
+  res.setHeader('X-Powered-By', 'PHP 7.4.3')
+  next()
+})
 
 const server = require('http').createServer(app);
 
@@ -25,8 +37,9 @@ app.route('/')
         res.sendFile(process.cwd() + '/views/index.html');
     });
 
-//For FCC testing purposes
+app.use(cors({origin: '*'}))//For FCC testing purposes
 fccTestingRoutes(app);
+
 
 // 404 Not Found Middleware
 app.use(function(req, res, next) {
