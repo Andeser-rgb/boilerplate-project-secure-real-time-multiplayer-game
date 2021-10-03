@@ -7,19 +7,41 @@ const canvas = document.getElementById('game-window');
 const context = canvas.getContext('2d');
 const { width, height } = canvas;
 
+const player_image = new Image(40, 40);
+player_image.src = 'public/cat-player.png';
+
+const enemy_image = new Image(40, 40);
+enemy_image.src = 'public/cat-enemy1.png';
+
+const coin_image = new Image(30, 30);
+coin_image.src = 'public/coin.png';
+
+const imgArray = [player_image, enemy_image];
+
 let currPlayers = [];
 
 let tick;
 
+let coin = new Collectible({
+    x: Math.floor(Math.random() * (width - 29)),
+    y: Math.floor(Math.random() * (height - 29)),
+    value: 1,
+    id: "coin"
+});
 
+let mainPlayer;
 
 function draw(){
     context.clearRect(0, 0, width, height);
     context.fillStyle = '#162B32';
     context.fillRect(0, 0, width, height);
     currPlayers.forEach(player => {
-        player.draw(context);
+        player.calculateRank(currPlayers);
+        player.draw(context, imgArray);
     });
+    console.log(mainPlayer.calculateRank(currPlayers));
+    coin.draw(context, coin_image);
+
     tick = requestAnimationFrame(draw);
 }
 
@@ -30,7 +52,7 @@ socket.on('init', (id, playerList) => {
             currPlayers.push(new Player(d));
     });
 
-    let mainPlayer = new Player({
+    mainPlayer = new Player({
         x: width / 2,
         y: height / 2,
         score: 0,
@@ -63,6 +85,12 @@ socket.on('init', (id, playerList) => {
     });
     socket.on("delete-player", id => {
         currPlayers = currPlayers.filter(p => p.id != id);
+    });
+    socket.on('coin', emitted_coin => {
+        coin = new Collectible(emitted_coin);
+    });
+    socket.on('update-score', (coin, id) => {
+        currPlayers.find(d => d.id == id).collision(coin);
     });
     draw();
 

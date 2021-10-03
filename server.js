@@ -16,10 +16,10 @@ app.use(helmet.noSniff());
 app.use(helmet.xssFilter());
 app.use(helmet.noCache());
 
-app.use(function (req, res, next) {
-  res.setHeader('X-Powered-By', 'PHP 7.4.3')
-  next()
-})
+app.use(function(req, res, next) {
+    res.setHeader('X-Powered-By', 'PHP 7.4.3');
+    next();
+});
 
 const server = require('http').createServer(app);
 
@@ -37,7 +37,9 @@ app.route('/')
         res.sendFile(process.cwd() + '/views/index.html');
     });
 
-app.use(cors({origin: '*'}))//For FCC testing purposes
+app.use(cors({
+    origin: '*'
+})); //For FCC testing purposes
 fccTestingRoutes(app);
 
 
@@ -52,12 +54,21 @@ const portNum = process.env.PORT || 3000;
 const io = socket(server);
 
 let playerList = [];
+let coin = {
+    x: Math.floor(Math.random() * (640 - 29)),
+    y: Math.floor(Math.random() * (480 - 29)),
+    value: 1,
+    id: Date.now(),
+};
+
 
 io.on('connection', socket => {
     console.log('A new user connected');
     socket.emit('init', socket.id, playerList);
+    socket.emit('coin', coin);
     socket.on("new-player", player => {
         playerList.push(player);
+        player.main = false;
         socket.broadcast.emit('new-player', player);
     });
     socket.on("move-player", (dir, id, posObj) => {
@@ -65,6 +76,21 @@ io.on('connection', socket => {
         let player = playerList.find(p => p.id == socket.id);
         player.x = posObj.x;
         player.y = posObj.y;
+        if (checkCollision({
+            x:player.x,
+            y: player.y
+        }, {
+            x: coin.x,
+            y: coin.y
+        })) {
+            console.log("Collision");
+            coin.x = Math.floor(Math.random() * (640 - 29));
+            coin.y = Math.floor(Math.random() * (480 - 29));
+            coin.id = Date.now();
+            io.emit('update-score', coin, player.id);
+            io.emit('coin', coin);
+        }
+
 
     });
     socket.on('stop-player', (dir, id, posObj) => {
@@ -72,6 +98,14 @@ io.on('connection', socket => {
         let player = playerList.find(p => p.id == socket.id);
         player.x = posObj.x;
         player.y = posObj.y;
+        if (checkCollision(player, coin)) {
+            console.log("Collision");
+            coin.x = Math.floor(Math.random() * (640 - 29));
+            coin.y = Math.floor(Math.random() * (480 - 29));
+            coin.id = Date.now();
+            io.emit('update-score', coin, player.id);
+            io.emit('coin', coin);
+        }
     });
     socket.on('disconnecting', () => {
         console.log("A user disconnected");
@@ -80,10 +114,6 @@ io.on('connection', socket => {
     });
 });
 
-
-io.on('key_pressed', socket => {
-    console.log(socket);
-});
 
 // Set up server and tests
 server.listen(portNum, () => {
@@ -103,5 +133,23 @@ server.listen(portNum, () => {
     }
 
 });
+
+function checkCollision(p, c) {
+    return checkXcollision(p, c) && checkYcollision(p, c);
+}
+function checkXcollision(p, c){
+    if(p.x <= c.x + 20 && p.x >= c.x) return true;
+    if(p.x + 70 <= c.x + 20 && p.x + 70 >= c.x) return true;
+    if(p.x + 70 <= c.x && p.x >= c.x) return true;
+    if(p.x<= c.x + 20 && p.x + 70 >= c.x + 20) return true;
+    return false;
+}
+function checkYcollision(p, c){
+    if(p.y <= c.y + 20 && p.y >= c.y) return true;
+    if(p.y + 70 <= c.y + 20 && p.y + 70 >= c.y) return true;
+    if(p.y + 70 <= c.y && p.y >= c.y) return true;
+    if(p.y <= c.y + 20 && p.y + 70 >= c.y + 20) return true;
+    return false;
+}
 
 module.exports = app; // For testing

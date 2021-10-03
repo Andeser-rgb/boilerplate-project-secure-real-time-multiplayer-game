@@ -3,12 +3,14 @@ class Player {
         x,
         y,
         score,
-        id
+        id,
+        main
     }) {
         this.x = x;
         this.y = y;
         this.score = score;
         this.id = id;
+        this.main = main;
         this.speed = 5;
         this.movingDirection = {
             up: false,
@@ -16,6 +18,7 @@ class Player {
             left: false,
             right: false
         };
+        this.rank = 1;
     }
 
     moveDir(dir){
@@ -25,12 +28,14 @@ class Player {
         this.movingDirection[dir] = false;
     }
 
-    draw(context){
+    draw(context, imgArray){
         Object.keys(this.movingDirection)
             .filter(d => this.movingDirection[d])
             .forEach(d => this.movePlayer(d, this.speed));
-        context.fillStyle = 'white';
-        context.fillRect(this.x, this.y, 30, 30);
+        if(this.main)
+            context.drawImage(imgArray[0], this.x, this.y, 40, 40);
+        else
+            context.drawImage(imgArray[1], this.x, this.y, 40, 40);
     }
 
 
@@ -42,11 +47,17 @@ class Player {
     }
 
     collision(item) {
-        return;
+        this.score += item.value;
     }
 
     calculateRank(arr) {
-        return;
+        arr.sort((a, b) => b.score - a.score);
+        let i;
+        for(i = 0; i < arr.length; i++){
+            if(arr[i].id == this.id) break;
+        }
+        this.rank = i + 1;
+        return "Rank:" + this.rank + '/' + arr.length;
     }
 }
 
